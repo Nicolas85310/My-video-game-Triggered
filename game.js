@@ -1,187 +1,209 @@
-kaboom()
+//IMPORTANT: Make sure to use Kaboom version 0.5.0 for this game by adding the correct script tag in the HTML file.
 
-loadSprite("bag", "/sprites/bag.png")
-loadSprite("ghosty", "/sprites/ghosty.png")
-loadSprite("grass", "/sprites/grass.png")
-loadSprite("steel", "/sprites/steel.png")
-loadSprite("door", "/sprites/door.png")
-loadSprite("key", "/sprites/key.png")
-loadSprite("bean", "/sprites/bean.png")
-
-scene("main", (levelIdx) => {
-
-	const SPEED = 320
-
-	// character dialog data
-	const characters = {
-		"a": {
-			sprite: "bag",
-			msg: "ohhi how are you?",
-		},
-		"b": {
-			sprite: "ghosty",
-			msg: "get out!",
-		},
-	}
-
-	// level layouts
-	const levels = [
-		[
-			"=====|===",
-			"=       =",
-			"= a     =",
-			"=       =",
-			"=       =",
-			"=    $  =",
-			"=       =",
-			"=   @   =",
-			"=========",
-		],
-		
-	]
-
-	addLevel(levels[levelIdx], {
-		width: 64,
-		height: 64,
-		pos: vec2(64, 64),
-		"=": () => [
-			sprite("grass"),
-			area(),
-			solid(),
-		],
-		"-": () => [
-			sprite("steel"),
-			area(),
-			solid(),
-		],
-		"$": () => [
-			sprite("key"),
-			area(),
-			"key",
-		],
-		"@": () => [
-			sprite("bean"),
-			area(),
-			solid(),
-			"player",
-		],
-		"|": () => [
-			sprite("door"),
-			area(),
-			solid(),
-			"door",
-		],
-		// any() is a special function that gets called everytime there's a
-		// symbole not defined above and is supposed to return what that symbol
-		// means
-		any(ch) {
-			const char = characters[ch]
-			if (char) {
-				return [
-					sprite(char.sprite),
-					area(),
-					solid(),
-					"character",
-					{ msg: char.msg, },
-				]
-			}
-		},
-	})
-
-	// get the player game obj by tag
-	const player = get("player")[0]
-
-	function addDialog() {
-		const h = 160
-		const pad = 16
-		const bg = add([
-			pos(0, height() - h),
-			rect(width(), h),
-			color(0, 0, 0),
-			z(100),
-		])
-		const txt = add([
-			text("", {
-				width: width(),
-			}),
-			pos(0 + pad, height() - h + pad),
-			z(100),
-		])
-		bg.hidden = true
-		txt.hidden = true
-		return {
-			say(t) {
-				txt.text = t
-				bg.hidden = false
-				txt.hidden = false
-			},
-			dismiss() {
-				if (!this.active()) {
-					return
-				}
-				txt.text = ""
-				bg.hidden = true
-				txt.hidden = true
-			},
-			active() {
-				return !bg.hidden
-			},
-			destroy() {
-				bg.destroy()
-				txt.destroy()
-			},
-		}
-	}
-
-	let hasKey = false
-	const dialog = addDialog()
-
-	player.onCollide("key", (key) => {
-		destroy(key)
-		hasKey = true
-	})
-
-	player.onCollide("door", () => {
-		if (hasKey) {
-			if (levelIdx + 1 < levels.length) {
-				go("main", levelIdx + 1)
-			} else {
-				go("win")
-			}
-		} else {
-			dialog.say("you got no key!")
-		}
-	})
-
-	// talk on touch
-	player.onCollide("character", (ch) => {
-		dialog.say(ch.msg)
-	})
-
-	const dirs = {
-		"left": LEFT,
-		"right": RIGHT,
-		"up": UP,
-		"down": DOWN,
-	}
-
-	for (const dir in dirs) {
-		onKeyPress(dir, () => {
-			dialog.dismiss()
-		})
-		onKeyDown(dir, () => {
-			player.move(dirs[dir].scale(SPEED))
-		})
-	}
-
+kaboom({
+  global: true,
+  fullscreen: true,
+  scale: 1,
+  debug: true,
+  clearColor: [0, 0, 1, 1],
 })
 
-scene("win", () => {
-	add([
-		text("You Win!"),
-		pos(width() / 2, height() / 2),
-		origin("center"),
-	])
+// Speeds
+const MOVE_SPEED = 120
+const SLICER_SPEED = 100
+const SKELETOR_SPEED = 60
+
+// Game Logic
+loadRoot('https://i.imgur.com/')
+
+//characters
+loadSprite('link-going-left', '1Xq9biB.png')
+loadSprite('link-going-right', 'yZIb8O2.png')
+loadSprite('link-going-down', 'tVtlP6y.png')
+loadSprite('link-going-up', 'UkV0we0.png')
+
+//boots
+//.........
+
+//objetcs
+loadSprite('left-wall', 'rfDoaa1.png')
+loadSprite('top-wall', 'QA257Bj.png')
+loadSprite('bottom-wall', 'vWJWmvb.png')
+loadSprite('right-wall', 'SmHhgUn.png')
+loadSprite('bottom-left-wall', 'awnTfNC.png')
+loadSprite('bottom-right-wall', '84oyTFy.png')
+loadSprite('top-left-wall', 'xlpUxIm.png')
+loadSprite('top-right-wall', 'z0OmBd1.jpg')
+loadSprite('top-door', 'U9nre4n.png')
+loadSprite('fire-pot', 'I7xSp7w.png')
+loadSprite('left-door', 'okdJNls.png')
+loadSprite('lanterns', 'wiSiY09.png')
+loadSprite('slicer', 'c6JFi5Z.png')
+loadSprite('skeletor', 'Ei1VnX8.png')
+loadSprite('kaboom', 'o9WizfI.png')
+loadSprite('stairs', 'VghkL08.png')
+loadSprite('bg', 'u4DVsx6.png')
+
+scene('game', ({ level, score }) => {
+  layers(['bg', 'obj', 'ui'], 'obj')
+
+  const maps = [
+    [
+      'ycc)cc^ccw',
+      'a        b',
+      'a   $   *b',
+      'a    (   b',
+      '%        b',
+      'a    (   b',
+      'a   *    b',
+      'a        b',
+      'xdd)dd)ddz',
+    ],
+    [
+      'yccccccccw',
+      'a        b',
+      ')        )',
+      'a        b',
+      'a        b',
+      'a    $   b',
+      ')   }    )',
+      'a        b',
+      'xddddddddz',
+    ],
+  ]
+
+  const levelCfg = {
+    width: 48,
+    height: 48,
+    a: [sprite('left-wall'), solid(), 'wall'],
+    b: [sprite('right-wall'), solid(), 'wall'],
+    c: [sprite('top-wall'), solid(), 'wall'],
+    d: [sprite('bottom-wall'), solid(), 'wall'],
+    w: [sprite('top-right-wall'), solid(), 'wall'],
+    x: [sprite('bottom-left-wall'), solid(), 'wall'],
+    y: [sprite('top-left-wall'), solid(), 'wall'],
+    z: [sprite('bottom-right-wall'), solid(), 'wall'],
+    '%': [sprite('left-door'), solid(), 'door'],
+    '^': [sprite('top-door'), 'next-level'],
+    $: [sprite('stairs'), 'next-level'],
+    '*': [sprite('slicer'), 'slicer', { dir: -1 }, 'dangerous'],
+    '}': [sprite('skeletor'), 'dangerous', 'skeletor', { dir: -1, timer: 0 }],
+    ')': [sprite('lanterns'), solid()],
+    '(': [sprite('fire-pot'), solid()],
+  }
+  addLevel(maps[level], levelCfg)
+
+  add([sprite('bg'), layer('bg')])
+
+  const scoreLabel = add([
+    text('0'),
+    pos(400, 450),
+    layer('ui'),
+    {
+      value: score,
+    },
+    scale(2),
+  ])
+
+  add([text('level ' + parseInt(level + 1)), pos(400, 465), scale(2)])
+
+  const player = add([
+    sprite('link-going-right'),
+    pos(5, 190),
+    {
+      // right by default
+      dir: vec2(1, 0),
+    },
+  ])
+
+  player.action(() => {
+    player.resolve()
+  })
+
+  player.overlaps('next-level', () => {
+    go('game', {
+      level: (level + 1) % maps.length,
+      score: scoreLabel.value,
+    })
+  })
+
+  keyDown('left', () => {
+    player.changeSprite('link-going-left')
+    player.move(-MOVE_SPEED, 0)
+    player.dir = vec2(-1, 0)
+  })
+
+  keyDown('right', () => {
+    player.changeSprite('link-going-right')
+    player.move(MOVE_SPEED, 0)
+    player.dir = vec2(1, 0)
+  })
+
+  keyDown('up', () => {
+    player.changeSprite('link-going-up')
+    player.move(0, -MOVE_SPEED)
+    player.dir = vec2(0, -1)
+  })
+
+  keyDown('down', () => {
+    player.changeSprite('link-going-down')
+    player.move(0, MOVE_SPEED)
+    player.dir = vec2(0, 1)
+  })
+
+  function spawnKaboom(p) {
+    const obj = add([sprite('kaboom'), pos(p), 'kaboom'])
+    wait(1, () => {
+      destroy(obj)
+    })
+  }
+
+  keyPress('space', () => {
+    spawnKaboom(player.pos.add(player.dir.scale(48)))
+  })
+
+  player.collides('door', (d) => {
+    destroy(d)
+  })
+
+  collides('kaboom', 'skeletor', (k,s) => {
+    camShake(4)
+    wait(1, () => {
+      destroy(k)
+    })
+    destroy(s)
+    scoreLabel.value++
+    scoreLabel.text = scoreLabel.value
+  })
+
+  action('slicer', (s) => {
+    s.move(s.dir * SLICER_SPEED, 0)
+  })
+
+  collides('slicer', 'wall', (s) => {
+    s.dir = -s.dir
+  })
+
+  action('skeletor', (s) => {
+    s.move(0, s.dir * SKELETOR_SPEED)
+    s.timer -= dt()
+    if (s.timer <= 0) {
+      s.dir = -s.dir
+      s.timer = rand(5)
+    }
+  })
+
+  collides('skeletor', 'wall', (s) => {
+    s.dir = -s.dir
+  })
+
+  player.overlaps('dangerous', () => {
+    go('lose', { score: scoreLabel.value })
+  })
 })
 
-go("main", 0)
+scene('lose', ({ score }) => {
+  add([text(score, 32), origin('center'), pos(width() / 2, height() / 2)])
+})
+
+start('game', { level: 0, score: 0 })
