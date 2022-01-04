@@ -22,10 +22,10 @@ export default class Canvas {
            0,
            225,
            225,
-           element.x * this.stepx,
-           element.y * this.stepy,
-           this.stepx,
-           this.stepy)
+           element.x * this.stepX,
+           element.y * this.stepY,
+           this.stepX,
+           this.stepY)
        
        
            

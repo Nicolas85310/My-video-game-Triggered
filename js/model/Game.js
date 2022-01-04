@@ -17,7 +17,7 @@ export default class Game {
 
     display(element) {
         switch (element.constructor.name) {
-            case "square":
+            case "Square":
                 this.canvas.display(element);
         }
     }
