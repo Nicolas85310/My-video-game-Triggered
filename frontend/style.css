@@ -1,3 +1,9 @@
+#logo {
+  text-align:center;
+  margin:auto;
+  display:flex;
+}
+
 #container {
   width: 100%;
   display: flex;
@@ -8,7 +14,6 @@
   display: flex;
   width: 100%;
   min-height: 400px;
-  margin: 100px;
   height: calc(100vh - 200px);
 }
 
